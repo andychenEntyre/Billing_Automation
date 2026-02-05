@@ -132,7 +132,6 @@ for user in user_excel_data:
           },
           "subscriber": {
             "address": {
-                #TODO populate address fields from eligibility response
               "address1": eligibility_data.get("subscriber", {}).get("address", {}).get("address1", ""),
               "city": eligibility_data.get("subscriber", {}).get("address", {}).get("city", ""),
               "postalCode": eligibility_data.get("subscriber", {}).get("address", {}).get("postalCode", ""),
@@ -179,7 +178,7 @@ for user in user_excel_data:
         except ValueError:
             print("❌❌❌ Failed to parse JSON response")
     else:
-        print("❌❌❌ Fail")
+        print("❌❌❌", user["Name"], "Medicaid eligibility not found")
 
 
 flat_df = pd.json_normalize(data=parsed_responses,
