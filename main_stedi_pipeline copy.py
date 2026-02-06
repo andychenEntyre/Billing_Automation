@@ -14,7 +14,7 @@ import datetime
 YEAR = '2026'
 MONTH = '01'
 
-user_excel_data = pd.read_csv('Jan_stedi_billing.csv').to_dict(orient='records')
+user_excel_data = pd.read_csv('Jan_stedi_billing_PT2.csv').to_dict(orient='records')
 parsed_responses = []
 
 for user in user_excel_data:
@@ -31,6 +31,7 @@ for user in user_excel_data:
       "subscriber": {
         "memberId": re.sub(r'[^A-Za-z0-9\- ]', '', str(user.get('Medicaid ID')).strip()) #TODO need to add memberID to csv file before running this.
       },
+      #TODO check if tradingPartnerServiceId is correct
       "tradingPartnerServiceId": "SMZIL"
     }
     response = requests.request("POST", url, json = body, headers = {
