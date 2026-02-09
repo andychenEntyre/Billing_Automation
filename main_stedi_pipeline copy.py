@@ -8,18 +8,18 @@ warnings.filterwarnings(
 
 import requests
 import pandas as pd
-import datetime
+from datetime import datetime
+import os
 
 # manually set year and month here
 YEAR = '2026'
 MONTH = '01'
 
-user_excel_data = pd.read_csv('Jan_stedi_billing_PT2.csv').to_dict(orient='records')
+user_excel_data = pd.read_csv('book5.csv').to_dict(orient='records')
 parsed_responses = []
 
 for user in user_excel_data:
     print(user)
-    print(str(user.get('Medicaid ID'))) #TODO need to add memberID to csv file before running this.
     print(re.sub(r'[^A-Za-z0-9\- ]', '', str(user.get('Medicaid ID')).strip()))
     print("\n")
     url = "https://healthcare.us.stedi.com/2024-04-01/change/medicalnetwork/eligibility/v3"
@@ -29,10 +29,11 @@ for user in user_excel_data:
         "organizationName": "ENTYRE CARE MASSACHUSETTS INC"
       },
       "subscriber": {
-        "memberId": re.sub(r'[^A-Za-z0-9\- ]', '', str(user.get('Medicaid ID')).strip()) #TODO need to add memberID to csv file before running this.
+        #TODO need to add memberID to csv file before running this.
+        "memberId": re.sub(r'[^A-Za-z0-9\- ]', '', str(user.get('Medicaid ID')).strip())
       },
-      #TODO check if tradingPartnerServiceId is correct
-      "tradingPartnerServiceId": "SMZIL"
+      #TODO this if more Medicaid eligibility
+      "tradingPartnerServiceId": "KWDBT"
     }
     response = requests.request("POST", url, json = body, headers = {
       "Authorization": "RYnvhqL.0X6jgBc6ewt5N7v2ILnQtiGy",
@@ -58,9 +59,9 @@ for user in user_excel_data:
             if qty <= 0:
                 print(col, "No matching charge amount for quantity:")
                 continue
-
+            #TODO need to confirm with entyre if the charge amount is always the same for qty 1 and 0.5.
             if qty == 1:
-                charge_amount = "102.68"
+                charge_amount = str(user["Rate"])
                 # print(col, charge_amount)
             elif qty == 0.5:
                 charge_amount = "51.34"
@@ -72,7 +73,8 @@ for user in user_excel_data:
                     "compositeDiagnosisCodePointers": {"diagnosisCodePointers": ["1"]},
                     "lineItemChargeAmount": charge_amount,
                     "measurementUnit": "UN",
-                    "procedureCode": "S5136",
+                    #TODO need to confirm with entyre if the procedure code is always the same for all service lines
+                    "procedureCode": "S5140",
                     "procedureIdentifier": "HC",
                     "procedureModifiers": [],
                     "serviceUnitCount": "1"
@@ -81,6 +83,7 @@ for user in user_excel_data:
                 "renderingProvider": None,
                 "serviceDate": f"{YEAR}{int(MONTH):02d}{n:02d}"
             })
+        # print("✅ Service line items built:", service_line_items)
         pulled = {
           "billing": {
             "address": {
@@ -102,26 +105,27 @@ for user in user_excel_data:
           },
           "claimInformation": {
             "benefitsAssignmentCertificationIndicator": "Y",
-            "claimChargeAmount": user['Billed'].replace('$', '').replace(',', '').strip(),  #needs to be the total Billable amout from excel
+            "claimChargeAmount": str(user['Billed']).replace('$', '').replace(',', '').strip(),  #needs to be the total Billable amout from excel
             "claimFilingCode": "MC",
             "claimFrequencyCode": "1",
             "healthCareCodeInformation": [
               {
-                "diagnosisCode": "R6889",
+                  #TODO unique for each payer
+                "diagnosisCode": "Z741",
                 "diagnosisTypeCode": "ABK"
               }
             ],
-            "patientControlNumber": str(user.get('Hubspot ID', 'missing')), #todo hubspot RecordID
+            "patientControlNumber": str(user.get('public_id', 'missing')), #todo hubspot RecordID
             "placeOfServiceCode": "12",
             "planParticipationCode": "A",
             "releaseInformationCode": "Y",
             "serviceFacilityLocation": None,
-            #TODO Feb4th make sure "service_line_items" is populated and formated correctly from excel
             "serviceLines": service_line_items,
             "signatureIndicator": "Y"
           },
           "receiver": {
-            "organizationName": "UnitedHealthcare"
+            #TODO check if organizationName is correct
+            "organizationName": "Senior Whole Health"
           },
           "submitter": {
             "contactInformation": {
@@ -145,11 +149,13 @@ for user in user_excel_data:
             "lastName": eligibility_data.get("subscriber", {}).get("lastName", ""),
             "memberId": eligibility_data.get("subscriber", {}).get("memberId", ""),
             "paymentResponsibilityLevelCode": "P",
-            "subscriberGroupName": "UnitedHealthcare"
+            #TODO check if subscriberGroupName is correct
+            "subscriberGroupName": "Senior Whole Health",
           },
-          "tradingPartnerName": "UnitedHealthcare",
-          "tradingPartnerServiceId": "87726",
-          "usageIndicator": "P"
+          #TODO check if tradingPartnerName and tradingPartnerServiceId are correct
+          "tradingPartnerName": "Senior Whole Health",
+          "tradingPartnerServiceId": "SWHMA",
+          "usageIndicator": "T"
         }
         url = "https://healthcare.us.stedi.com/2024-04-01/change/medicalnetwork/professionalclaims/v3/submission"
         body = pulled
@@ -184,4 +190,11 @@ for user in user_excel_data:
 
 flat_df = pd.json_normalize(data=parsed_responses,
                             sep='_')
-flat_df.to_csv('stedi_jan_parsed_responses_full.csv', index=False)
+timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+filename = f"stedi_jan_parsed_responses_full_{timestamp}.csv"
+
+output_dir = "submission_log"
+os.makedirs(output_dir, exist_ok=True)
+
+output_path = os.path.join(output_dir, filename)
+flat_df.to_csv(output_path, index=False)
