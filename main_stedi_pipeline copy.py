@@ -15,7 +15,12 @@ import os
 YEAR = '2026'
 MONTH = '01'
 
-user_excel_data = pd.read_csv('book5.csv').to_dict(orient='records')
+state = dict
+insurance = dict
+
+USAGE_INDICATOR = "T"
+
+user_excel_data = pd.read_csv('molina_feb_11.csv').to_dict(orient='records')
 parsed_responses = []
 
 for user in user_excel_data:
@@ -59,7 +64,7 @@ for user in user_excel_data:
             if qty <= 0:
                 print(col, "No matching charge amount for quantity:")
                 continue
-            #TODO need to confirm with entyre if the charge amount is always the same for qty 1 and 0.5.
+            #TODO
             if qty == 1:
                 charge_amount = str(user["Rate"])
                 # print(col, charge_amount)
@@ -155,7 +160,7 @@ for user in user_excel_data:
           #TODO check if tradingPartnerName and tradingPartnerServiceId are correct
           "tradingPartnerName": "Senior Whole Health",
           "tradingPartnerServiceId": "SWHMA",
-          "usageIndicator": "T"
+          "usageIndicator": USAGE_INDICATOR
         }
         url = "https://healthcare.us.stedi.com/2024-04-01/change/medicalnetwork/professionalclaims/v3/submission"
         body = pulled
@@ -190,11 +195,17 @@ for user in user_excel_data:
 
 flat_df = pd.json_normalize(data=parsed_responses,
                             sep='_')
-timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-filename = f"stedi_jan_parsed_responses_full_{timestamp}.csv"
 
-output_dir = "submission_log"
-os.makedirs(output_dir, exist_ok=True)
+if USAGE_INDICATOR != "T":
+  timestamp = datetime.now().strftime("%Y%m%d")
+  filename = f"stedi_jan_parsed_responses_full_{timestamp}.csv"
+  flat_df['date_time'] = timestamp
 
-output_path = os.path.join(output_dir, filename)
-flat_df.to_csv(output_path, index=False)
+  output_dir = "submission_log"
+  os.makedirs(output_dir, exist_ok=True)
+
+  output_path = os.path.join(output_dir, filename)
+  flat_df.to_csv(output_path, index=False)
+  print(f"✅✅✅ Parsed responses saved to {output_path}")
+else:
+  print("Test submission - parsed responses not saved to CSV")
