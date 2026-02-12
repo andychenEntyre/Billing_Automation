@@ -11,6 +11,10 @@ __pycache__/
 *.xlsx
 *.csv
 
+# ignore the whole log directory (optional but cleanest)
+submission_log/
+claim_status_check/
+
 # Distribution / packaging
 .Python
 build/
