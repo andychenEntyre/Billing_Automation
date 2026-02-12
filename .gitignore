@@ -6,6 +6,11 @@ __pycache__/
 # C extensions
 *.so
 
+# Ignore data and config file types
+*.json
+*.xlsx
+*.csv
+
 # Distribution / packaging
 .Python
 build/
