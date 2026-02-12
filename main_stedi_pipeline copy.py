@@ -20,7 +20,7 @@ insurance = dict
 
 USAGE_INDICATOR = "T"
 
-user_excel_data = pd.read_csv('molina_feb_11.csv').to_dict(orient='records')
+user_excel_data = pd.read_csv('MA_Molina/molina_feb_12.csv').to_dict(orient='records')
 parsed_responses = []
 
 for user in user_excel_data:
@@ -38,6 +38,8 @@ for user in user_excel_data:
         "memberId": re.sub(r'[^A-Za-z0-9\- ]', '', str(user.get('Medicaid ID')).strip())
       },
       #TODO this if more Medicaid eligibility
+      #MA medicaid = "KWDBT"
+      #OH medicaid = "SMZIL"
       "tradingPartnerServiceId": "KWDBT"
     }
     response = requests.request("POST", url, json = body, headers = {
@@ -110,7 +112,7 @@ for user in user_excel_data:
           },
           "claimInformation": {
             "benefitsAssignmentCertificationIndicator": "Y",
-            "claimChargeAmount": str(user['Billed']).replace('$', '').replace(',', '').strip(),  #needs to be the total Billable amout from excel
+            "claimChargeAmount": str(user['Total']).replace('$', '').replace(',', '').strip(),  #needs to be the total Billable amout from excel
             "claimFilingCode": "MC",
             "claimFrequencyCode": "1",
             "healthCareCodeInformation": [
@@ -159,6 +161,8 @@ for user in user_excel_data:
           },
           #TODO check if tradingPartnerName and tradingPartnerServiceId are correct
           "tradingPartnerName": "Senior Whole Health",
+          #MA - senior whole health = SWHMA
+          #OH - united healthcare = KMQTZ
           "tradingPartnerServiceId": "SWHMA",
           "usageIndicator": USAGE_INDICATOR
         }
@@ -200,6 +204,9 @@ if USAGE_INDICATOR != "T":
   timestamp = datetime.now().strftime("%Y%m%d")
   filename = f"stedi_jan_parsed_responses_full_{timestamp}.csv"
   flat_df['date_time'] = timestamp
+  # flat_df['medicaid_state'] = 
+  # flat_df['Medicaid_ID'] = re.sub(r'[^A-Za-z0-9\- ]', '', str(user.get('Medicaid ID')).strip())
+  flat_df['public_id'] = str(user.get('public_id', 'missing'))
 
   output_dir = "submission_log"
   os.makedirs(output_dir, exist_ok=True)
@@ -208,4 +215,4 @@ if USAGE_INDICATOR != "T":
   flat_df.to_csv(output_path, index=False)
   print(f"✅✅✅ Parsed responses saved to {output_path}")
 else:
-  print("Test submission - parsed responses not saved to CSV")
+  print("✅✅✅ Test submission - parsed responses not saved to CSV")
