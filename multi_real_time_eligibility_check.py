@@ -13,7 +13,16 @@ import os
 
 
 # user_excel_data = pd.read_csv('Ohio_UnitedHealth/howard_resubmit_UHC_ID.csv').to_dict(orient='records')
-user_excel_data = pd.read_csv('Ohio_UnitedHealth/rebill_ohio_27Feb26.csv').to_dict(orient='records')
+user_excel_data = pd.read_csv('Ohio_UnitedHealth/rebill_ohio_27Feb26 copy.csv').to_dict(orient='records')
+
+out_path = "benefitsInformation_flat.csv"
+
+if os.path.exists(out_path):
+    existing_df = pd.read_csv(out_path, dtype=str)  # dtype=str prevents type-mismatch issues
+else:
+    existing_df = pd.DataFrame()
+
+new_rows_df = pd.DataFrame()
 
 for user in user_excel_data:
     print("\n\n")
@@ -80,11 +89,12 @@ for user in user_excel_data:
             subscriber.get("middleName"),
             subscriber.get("lastName")
         ])
-    )
+    ).strip()
+    if not full_name:
+        full_name = "No name found"
 
     # Current datetime
     now = datetime.now()
-    # Format however you prefer
     run_date = now.strftime("%Y-%m-%d")          # 2026-02-27
     run_timestamp = now.strftime("%Y-%m-%d %H:%M:%S")  # 2026-02-27 14:32:08
 
@@ -93,8 +103,10 @@ for user in user_excel_data:
 
     # Append column and move to front
     df["patient_name"] = full_name
-    df = df[["patient_name", "run_date", "run_timestamp"] + [c for c in df.columns if c != "patient_name"]]
+    front = ["patient_name", "run_date", "run_timestamp"]
+    df = df[front + [c for c in df.columns if c not in front]]
 
+    df = df.astype(str)  # Ensure all data is string type for consistent CSV output
 
     # ✅ Only filter by code if the column exists
     if "code" in df.columns:
@@ -103,16 +115,30 @@ for user in user_excel_data:
         print("⚠️ 'code' column missing; available columns:", df.columns.tolist())
         print("⚠️ errors:", eligibility_data.get("errors", []))
         continue  # or omit this to export unfiltered rows
+    
+    # Normalize types for consistent concatenation across runs
+    df = df.astype(str)
 
-    # Append to CSV instead of overwriting
-    out_path = "benefitsInformation_flat.csv"
-    write_header = not os.path.exists(out_path)
+    new_rows_df = pd.concat([new_rows_df, df], ignore_index=True)
 
+# Preserve column order:
+# 1) Start with your preferred front columns
+front = ["patient_name", "run_date", "run_timestamp"]
 
-    df.to_csv(out_path,
-            index=False,
-            mode='a',
-            header=write_header)
-    # if eligibility_data.get("planStatus", [{}])[0].get("status", "No status found") != "Inactive":
-    #     print("✅ Success Medicaid eligibility found")
-       
+# 2) Then add all other columns in the order they appear in new_rows_df
+remaining_cols = [c for c in new_rows_df.columns if c not in front]
+
+# 3) Include any legacy columns from existing_df that aren't already included
+legacy_cols = [c for c in existing_df.columns if c not in front + remaining_cols]
+all_cols = front + remaining_cols + legacy_cols
+existing_df = existing_df.reindex(columns=all_cols)
+new_rows_df = new_rows_df.reindex(columns=all_cols)
+
+final_df = pd.concat([existing_df, new_rows_df], ignore_index=True)
+
+final_df.to_csv(out_path, index=False)
+
+print(f"✅ existing datatable rows {len(existing_df)} rows.")
+print(f"✅ Added {len(new_rows_df)} new rows.")
+print(f"✅ Total rows now: {len(final_df)}")
+print("✅ Wrote:", os.path.abspath(out_path))
