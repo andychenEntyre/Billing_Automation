@@ -10,7 +10,7 @@ __pycache__/
 *.json
 *.xlsx
 *.csv
-!/Users/Andy.Chen/Billing_Automation/real_time_eligibility_check/02March26_MA_clients.csv
+!Billing_Automation/real_time_eligibility_check/02March26_MA_clients.csv
 
 # ignore the whole log directory (optional but cleanest)
 submission_log/
