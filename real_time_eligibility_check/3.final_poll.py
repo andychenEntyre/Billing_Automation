@@ -9,7 +9,7 @@ import os
 
 
 BASE_URL = "https://manager.us.stedi.com/2024-04-01/eligibility-manager/polling/batch-eligibility"
-BATCH_ID = "019caf7a-dbe7-7d11-9992-98a4d11d5d84"
+BATCH_ID = "019cb3fe-d505-7a22-a73b-6e791940c03c"
 
 headers = {
     "Authorization": "RYnvhqL.0X6jgBc6ewt5N7v2ILnQtiGy",
@@ -130,11 +130,14 @@ for i, eligibility_data in enumerate(all_items, start=1):
         continue  # omit this if you want to keep unfiltered rows
 
      # Normalize types for consistent concatenation across runs
-    df = df.astype(str)
-
+    # df = df.astype(str)
+    df = df.fillna("").astype(str)  # Replace NaN with empty string for better CSV handling
+    
+    ''' for each patient after it pulls the benefitsInformation, it formats the data into a temp var 'df' and appends to 'new_rows_df'
+    which is then concatenated with existing_df (the old csv) and written back to the csv'''
     new_rows_df = pd.concat([new_rows_df, df], ignore_index=True)
 
-print("✅ Final rows:", len(new_rows_df))
+print("✅ new data final row count:", len(new_rows_df))
 
 out_path = "MA_medicaid_eligibility_results.csv"
 
