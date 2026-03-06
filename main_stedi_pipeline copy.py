@@ -14,13 +14,16 @@ import os
 # manually set year and month here
 YEAR = '2026'
 MONTH = '01'
+payerName = "Senior Whole Health"
 
 state = dict
 insurance = dict
 
 USAGE_INDICATOR = "T"
 
-user_excel_data = pd.read_csv('MA_Molina/molina_feb_12.csv').to_dict(orient='records')
+# user_excel_data = pd.read_csv('MA_Molina/molina_feb_12.csv').to_dict(orient='records')
+user_excel_data = pd.read_csv('Ohio_UnitedHealth/howard_resubmit.csv').to_dict(orient='records')
+
 parsed_responses = []
 
 for user in user_excel_data:
@@ -68,7 +71,8 @@ for user in user_excel_data:
                 continue
             #TODO
             if qty == 1:
-                charge_amount = str(user["Rate"])
+                # charge_amount = str(user["Rate"])
+                charge_amount = "102.68"
                 # print(col, charge_amount)
             elif qty == 0.5:
                 charge_amount = "51.34"
@@ -81,7 +85,9 @@ for user in user_excel_data:
                     "lineItemChargeAmount": charge_amount,
                     "measurementUnit": "UN",
                     #TODO need to confirm with entyre if the procedure code is always the same for all service lines
-                    "procedureCode": "S5140",
+                    #MA - S5140
+                    #OH - S5136
+                    "procedureCode": "S5136",
                     "procedureIdentifier": "HC",
                     "procedureModifiers": [],
                     "serviceUnitCount": "1"
@@ -118,7 +124,9 @@ for user in user_excel_data:
             "healthCareCodeInformation": [
               {
                   #TODO unique for each payer
-                "diagnosisCode": "Z741",
+                  #MA - Z741
+                  #OH - R6889
+                "diagnosisCode": "R6889",
                 "diagnosisTypeCode": "ABK"
               }
             ],
@@ -132,7 +140,7 @@ for user in user_excel_data:
           },
           "receiver": {
             #TODO check if organizationName is correct
-            "organizationName": "Senior Whole Health"
+            "organizationName": payerName
           },
           "submitter": {
             "contactInformation": {
@@ -157,12 +165,15 @@ for user in user_excel_data:
             "memberId": eligibility_data.get("subscriber", {}).get("memberId", ""),
             "paymentResponsibilityLevelCode": "P",
             #TODO check if subscriberGroupName is correct
-            "subscriberGroupName": "Senior Whole Health",
+            "subscriberGroupName": payerName,
           },
           #TODO check if tradingPartnerName and tradingPartnerServiceId are correct
-          "tradingPartnerName": "Senior Whole Health",
+          "tradingPartnerName": payerName,
           #MA - senior whole health = SWHMA
           #OH - united healthcare = KMQTZ
+          #OH - united healthcare Medicaid managed care entity = HSVNU
+          #MA medicaid = KWDBT
+          #OH medicaid = SMZIL
           "tradingPartnerServiceId": "SWHMA",
           "usageIndicator": USAGE_INDICATOR
         }
@@ -201,8 +212,10 @@ flat_df = pd.json_normalize(data=parsed_responses,
                             sep='_')
 
 if USAGE_INDICATOR != "T":
-  timestamp = datetime.now().strftime("%Y%m%d")
-  filename = f"stedi_jan_parsed_responses_full_{timestamp}.csv"
+  # More readable timestamp
+  timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+
+  filename = f"stedi_jan_parsed_responses_{timestamp}.csv"
   flat_df['date_time'] = timestamp
   # flat_df['medicaid_state'] = 
   # flat_df['Medicaid_ID'] = re.sub(r'[^A-Za-z0-9\- ]', '', str(user.get('Medicaid ID')).strip())
