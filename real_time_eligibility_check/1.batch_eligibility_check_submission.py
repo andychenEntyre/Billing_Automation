@@ -5,7 +5,7 @@ from datetime import datetime
 
 '''this file comes from Databricks MA client pull'''
 
-file_path = "real_time_eligibility_check/02March26_MA_clients.csv"
+file_path = "/Users/Andy.Chen/Billing_Automation/real_time_eligibility_check/02March26_MA_clients.csv"
 df = pd.read_csv(file_path)
 
 items = []
@@ -48,4 +48,4 @@ log_df = pd.DataFrame([{
     "submitted_at": response.json().get("submittedAt")
 }])
 
-log_df.to_csv("eligibility_batch_log.csv", mode="a", header=False, index=False)
+log_df.to_csv("/Users/Andy.Chen/Billing_Automation/eligibility_batch_log.csv", mode="a", header=False, index=False)
