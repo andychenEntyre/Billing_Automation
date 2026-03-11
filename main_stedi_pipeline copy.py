@@ -13,8 +13,10 @@ import os
 
 # manually set year and month here
 YEAR = '2026'
-MONTH = '01'
+MONTH = '02'
 payerName = "Senior Whole Health"
+procedure_code = "S5140"
+diagnosis_code = "Z741"
 
 state = dict
 insurance = dict
@@ -71,8 +73,8 @@ for user in user_excel_data:
                 continue
             #TODO
             if qty == 1:
-                # charge_amount = str(user["Rate"])
-                charge_amount = "102.68"
+                charge_amount = str(user["Rate"])
+                # charge_amount = "102.68"
                 # print(col, charge_amount)
             elif qty == 0.5:
                 charge_amount = "51.34"
@@ -87,7 +89,7 @@ for user in user_excel_data:
                     #TODO need to confirm with entyre if the procedure code is always the same for all service lines
                     #MA - S5140
                     #OH - S5136
-                    "procedureCode": "S5136",
+                    "procedureCode": procedure_code,
                     "procedureIdentifier": "HC",
                     "procedureModifiers": [],
                     "serviceUnitCount": "1"
@@ -126,7 +128,7 @@ for user in user_excel_data:
                   #TODO unique for each payer
                   #MA - Z741
                   #OH - R6889
-                "diagnosisCode": "R6889",
+                "diagnosisCode": diagnosis_code,
                 "diagnosisTypeCode": "ABK"
               }
             ],
