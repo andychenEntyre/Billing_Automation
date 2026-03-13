@@ -13,10 +13,13 @@ import os
 
 
 # user_excel_data = pd.read_csv('Ohio_UnitedHealth/howard_resubmit_UHC_ID.csv').to_dict(orient='records')
-user_excel_data = pd.read_csv('Ohio_UnitedHealth/rebill_ohio_27Feb26.csv').to_dict(orient='records')
-# user_excel_data = pd.read_csv('real_time_eligibility_check/02March26_MA_clients.csv').to_dict(orient='records')
+# user_excel_data = pd.read_csv('Ohio_UnitedHealth/rebill_ohio_27Feb26.csv').to_dict(orient='records')
+user_excel_data = pd.read_csv('real_time_eligibility_check/test_02March26_MA_clients.csv').to_dict(orient='records')
 
-out_path = "benefitsInformation_flat.csv"
+#POC with Ohio UHC people
+# out_path = "benefitsInformation_flat.csv"
+
+out_path = "MA_medicaid_eligibility_results.csv"
 
 if os.path.exists(out_path):
     existing_df = pd.read_csv(out_path, dtype=str)  # dtype=str prevents type-mismatch issues
@@ -39,17 +42,17 @@ for user in user_excel_data:
         "organizationName": "ENTYRE CARE MASSACHUSETTS INC"
       },
       "subscriber": {
-        "firstName": str(user.get('user_Name').split()[0]),
-        "lastName": str(user.get('user_Name').split()[1]),
+        "firstName": str(user.get('first_name')),
+        "lastName": str(user.get('last_name')),
         #TODO
-        "memberId": re.sub(r'[^A-Za-z0-9\- ]', '', str(user.get('Medicaid ID')).strip())
+        "memberId": re.sub(r'[^A-Za-z0-9\- ]', '', str(user.get('medicaid_id')).strip())
       },
       #TODO this if more Medicaid eligibility
       #MA medicaid= KWDBT
       #Ohio medicaid= SMZIL
       #UHC = KMQTZ
       #UHC Medicaid managed care entity= HSVNU
-      "tradingPartnerServiceId": "SMZIL"
+      "tradingPartnerServiceId": "KWDBT"
       # "tradingPartnerServiceId": str(user.get('response_tradingPartnerServiceId'))
     }
     response = requests.request("POST", url, json = body, headers = {
@@ -61,7 +64,7 @@ for user in user_excel_data:
     # print(json.dumps(eligibility_data, indent=2))
     benefits = eligibility_data.get("benefitsInformation", [])
 
-    print(user["user_Name"])
+    print(user["first_name"], user["last_name"])
     print("❓❓❓gender:", eligibility_data.get("subscriber", {}).get("gender", "No gender found"))
     '''check to find patients eligibility status''' 
     print("❓❓❓first status: ", eligibility_data.get("planStatus", [{}])[0].get("status", "No status found"))
@@ -110,8 +113,10 @@ for user in user_excel_data:
     df = df.astype(str)  # Ensure all data is string type for consistent CSV output
 
     # ✅ Only filter by code if the column exists
-    if "code" in df.columns:
-        df = df[df["code"].astype(str) == "1"]
+    if "code" in df.columns and "serviceTypeCodes" in df.columns:
+        df = df[df["code"].astype(str).isin(["1", "2", "3", "4", "5"])]
+        #removes rows where "serviceTypeCodes" contains "88"
+        df = df[~df["serviceTypeCodes"].astype(str).str.contains("88", na=False)]
     else:
         print("⚠️ 'code' column missing; available columns:", df.columns.tolist())
         print("⚠️ errors:", eligibility_data.get("errors", []))
