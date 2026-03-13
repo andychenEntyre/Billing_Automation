@@ -21,10 +21,10 @@ diagnosis_code = "Z741"
 state = dict
 insurance = dict
 
-USAGE_INDICATOR = "T"
+USAGE_INDICATOR = "P"
 
 # user_excel_data = pd.read_csv('MA_Molina/molina_feb_12.csv').to_dict(orient='records')
-user_excel_data = pd.read_csv('Ohio_UnitedHealth/howard_resubmit.csv').to_dict(orient='records')
+user_excel_data = pd.read_csv('/Users/Andy.Chen/Billing_Automation/MA_Molina/11March26_feb_billing.csv').to_dict(orient='records')
 
 parsed_responses = []
 
@@ -73,7 +73,7 @@ for user in user_excel_data:
                 continue
             #TODO
             if qty == 1:
-                charge_amount = str(user["Rate"])
+                charge_amount = str(user["Rate"]).replace('$', '').strip()
                 # charge_amount = "102.68"
                 # print(col, charge_amount)
             elif qty == 0.5:
@@ -81,6 +81,14 @@ for user in user_excel_data:
                 # print(col, charge_amount)
             else:
                 None   
+
+            modifier = user.get("Modifier")
+            procedure_modifier = []
+            if modifier is not None and not pd.isna(modifier):
+                modifier = str(modifier).strip()
+                if modifier:
+                  procedure_modifier = [modifier]
+
             service_line_items.append({
                 "professionalService": {
                     "compositeDiagnosisCodePointers": {"diagnosisCodePointers": ["1"]},
@@ -91,7 +99,7 @@ for user in user_excel_data:
                     #OH - S5136
                     "procedureCode": procedure_code,
                     "procedureIdentifier": "HC",
-                    "procedureModifiers": [],
+                    "procedureModifiers": procedure_modifier,
                     "serviceUnitCount": "1"
                 },
                 # "providerControlNumber": "1", #if empty string, stedi auto-generates one
