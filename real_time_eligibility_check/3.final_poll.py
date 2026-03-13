@@ -9,7 +9,7 @@ import os
 
 
 BASE_URL = "https://manager.us.stedi.com/2024-04-01/eligibility-manager/polling/batch-eligibility"
-BATCH_ID = "019cb3fe-d505-7a22-a73b-6e791940c03c"
+BATCH_ID = "019cc3a0-8426-7c93-a249-a32e20eaa908"
 
 headers = {
     "Authorization": "RYnvhqL.0X6jgBc6ewt5N7v2ILnQtiGy",
@@ -129,7 +129,7 @@ for i, eligibility_data in enumerate(all_items, start=1):
         print("⚠️ errors:", eligibility_data.get("errors", []))
         continue  # omit this if you want to keep unfiltered rows
 
-     # Normalize types for consistent concatenation across runs
+    # Normalize types for consistent concatenation across runs
     # df = df.astype(str)
     df = df.fillna("").astype(str)  # Replace NaN with empty string for better CSV handling
     
