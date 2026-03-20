@@ -14,8 +14,10 @@ from nanoid import generate
 
 # manually set year and month here
 YEAR = '2026'
-MONTH = '02'
-payerName = "Senior Whole Health"
+MONTH = '01'
+payerName = "Molina Healthcare of Ohio"
+STEDI_PAYER_ID = "BMYAQ" #Molina Healthcare of Ohio
+MEDICAID_BY_STATE = "SMZIL" #Ohio medicaid
 procedure_code = "S5140"
 diagnosis_code = "Z741"
 PCN_LENGTH = 17
@@ -27,7 +29,8 @@ insurance = dict
 USAGE_INDICATOR = "T"
 
 # user_excel_data = pd.read_csv('MA_Molina/molina_feb_12.csv').to_dict(orient='records')
-user_excel_data = pd.read_csv('/Users/Andy.Chen/Billing_Automation/MA_Molina/11March26_feb_billing.csv').to_dict(orient='records')
+# user_excel_data = pd.read_csv('/Users/Andy.Chen/Billing_Automation/MA_Molina/11March26_feb_billing.csv').to_dict(orient='records')
+user_excel_data = pd.read_csv('/Users/Andy.Chen/Billing_Automation/Ohio_UnitedHealth/20march26_molinaOH.csv').to_dict(orient='records')
 
 parsed_responses = []
 used_patient_control_numbers = set()
@@ -57,7 +60,7 @@ for user in user_excel_data:
       #TODO this if more Medicaid eligibility
       #MA medicaid = "KWDBT"
       #OH medicaid = "SMZIL"
-      "tradingPartnerServiceId": "KWDBT"
+      "tradingPartnerServiceId": MEDICAID_BY_STATE
     }
     response = requests.request("POST", url, json = body, headers = {
       "Authorization": "RYnvhqL.0X6jgBc6ewt5N7v2ILnQtiGy",
@@ -77,6 +80,7 @@ for user in user_excel_data:
             col = f"D{n}"
             raw = user.get(col)
             if raw is None:
+                print("missing day")
                 continue
             try:
                 qty = float(raw)
@@ -199,7 +203,7 @@ for user in user_excel_data:
           #OH - united healthcare Medicaid managed care entity = HSVNU
           #MA medicaid = KWDBT
           #OH medicaid = SMZIL
-          "tradingPartnerServiceId": "SWHMA",
+          "tradingPartnerServiceId": STEDI_PAYER_ID,
           "usageIndicator": USAGE_INDICATOR
         }
         url = "https://healthcare.us.stedi.com/2024-04-01/change/medicalnetwork/professionalclaims/v3/submission"
