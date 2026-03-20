@@ -10,6 +10,7 @@ import requests
 import pandas as pd
 from datetime import datetime
 import os
+from nanoid import generate
 
 # manually set year and month here
 YEAR = '2026'
@@ -17,16 +18,27 @@ MONTH = '02'
 payerName = "Senior Whole Health"
 procedure_code = "S5140"
 diagnosis_code = "Z741"
+PCN_LENGTH = 17
+PCN_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 
 state = dict
 insurance = dict
 
-USAGE_INDICATOR = "P"
+USAGE_INDICATOR = "T"
 
 # user_excel_data = pd.read_csv('MA_Molina/molina_feb_12.csv').to_dict(orient='records')
 user_excel_data = pd.read_csv('/Users/Andy.Chen/Billing_Automation/MA_Molina/11March26_feb_billing.csv').to_dict(orient='records')
 
 parsed_responses = []
+used_patient_control_numbers = set()
+
+
+def new_patient_control_number(existing):
+    while True:
+        pcn = generate(PCN_ALPHABET, PCN_LENGTH)
+        if pcn not in existing:
+            existing.add(pcn)
+            return pcn
 
 for user in user_excel_data:
     print(user)
@@ -64,6 +76,8 @@ for user in user_excel_data:
         for n in range(1, 32):
             col = f"D{n}"
             raw = user.get(col)
+            if raw is None:
+                continue
             try:
                 qty = float(raw)
             except (TypeError, ValueError):
@@ -80,7 +94,7 @@ for user in user_excel_data:
                 charge_amount = "51.34"
                 # print(col, charge_amount)
             else:
-                None   
+                continue
 
             modifier = user.get("Modifier")
             procedure_modifier = []
@@ -107,6 +121,7 @@ for user in user_excel_data:
                 "serviceDate": f"{YEAR}{int(MONTH):02d}{n:02d}"
             })
         # print("✅ Service line items built:", service_line_items)
+        patient_control_number = new_patient_control_number(used_patient_control_numbers)
         pulled = {
           "billing": {
             "address": {
@@ -140,7 +155,7 @@ for user in user_excel_data:
                 "diagnosisTypeCode": "ABK"
               }
             ],
-            "patientControlNumber": str(user.get('public_id', 'missing')), #todo hubspot RecordID
+            "patientControlNumber": patient_control_number,
             "placeOfServiceCode": "12",
             "planParticipationCode": "A",
             "releaseInformationCode": "Y",
@@ -206,8 +221,12 @@ for user in user_excel_data:
             # print("Response Errors:", errors)
             print(json.dumps(parsed, indent=2))
             parsed_responses.append({
-                "user": {"Name": user.get("Name"), 
-                "Medicaid ID": user.get("Medicaid ID")},
+                "user": {
+                    "Name": user.get("Name"),
+                    "Medicaid ID": user.get("Medicaid ID"),
+                    "public_id": user.get("public_id", "missing")
+                },
+                "patient_control_number": patient_control_number,
                 "status_code": parsed.get("status"),
                 "errors": parsed.get("errors"),
                 "response": parsed
@@ -229,7 +248,6 @@ if USAGE_INDICATOR != "T":
   flat_df['date_time'] = timestamp
   # flat_df['medicaid_state'] = 
   # flat_df['Medicaid_ID'] = re.sub(r'[^A-Za-z0-9\- ]', '', str(user.get('Medicaid ID')).strip())
-  flat_df['public_id'] = str(user.get('public_id', 'missing'))
 
   output_dir = "submission_log"
   os.makedirs(output_dir, exist_ok=True)
