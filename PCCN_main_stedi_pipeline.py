@@ -62,6 +62,14 @@ for user in user_excel_data:
         for n in range(1, 32):
             col = f"D{n}"
             raw = user.get(col)
+            modifier = user.get("Modifier")
+            procedure_modifiers = []
+            if modifier is not None and not pd.isna(modifier):
+                modifier = str(modifier).strip()
+                if modifier:
+                    procedure_modifiers = [modifier]
+            if raw is None:
+                continue
             try:
                 qty = float(raw)
             except (TypeError, ValueError):
@@ -78,7 +86,7 @@ for user in user_excel_data:
                 charge_amount = "51.34"
                 # print(col, charge_amount)
             else:
-                None   
+                continue
             service_line_items.append({
                 "professionalService": {
                     "compositeDiagnosisCodePointers": {"diagnosisCodePointers": ["1"]},
@@ -89,13 +97,32 @@ for user in user_excel_data:
                     #OH - S5136
                     "procedureCode": "S5140",
                     "procedureIdentifier": "HC",
-                    "procedureModifiers": ["TG"], #TODO need to confirm if this is always the same for all service lines
+                    "procedureModifiers": procedure_modifiers,
                     "serviceUnitCount": "1"
                 },
                 # "providerControlNumber": "1", #if empty string, stedi auto-generates one
                 "renderingProvider": None,
                 "serviceDate": f"{YEAR}{int(MONTH):02d}{n:02d}"
             })
+        if not service_line_items:
+            print("❌❌❌", user.get("Name", "Unknown user"), "has no billable service lines; skipping claim submission")
+            parsed_responses.append({
+                "user": {
+                    "Name": user.get("Name"),
+                    "Medicaid ID": user.get("Medicaid ID")
+                },
+                "status_code": "skipped",
+                "errors": [{
+                    "code": "NO_SERVICE_LINES",
+                    "message": "No positive D1-D31 values were found for this claim."
+                }],
+                "response": {
+                    "claimInformation": {
+                        "serviceLines": []
+                    }
+                }
+            })
+            continue
         # print("✅ Service line items built:", service_line_items)
         pulled = {
           "billing": {
