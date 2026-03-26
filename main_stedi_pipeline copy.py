@@ -16,17 +16,30 @@ from nanoid import generate
 YEAR = '2026'
 MONTH = '01'
 payerName = "Molina Healthcare of Ohio"
+  #MA - senior whole health = SWHMA
+  #OH - united healthcare = KMQTZ
+  #OH - united healthcare Medicaid managed care entity = HSVNU
+  #MA medicaid = KWDBT
+  #OH medicaid = SMZIL          #MA - senior whole health = SWHMA
+  #OH - united healthcare = KMQTZ
+  #OH - united healthcare Medicaid managed care entity = HSVNU
 STEDI_PAYER_ID = "BMYAQ" #Molina Healthcare of Ohio
+#MA medicaid = "KWDBT"
+#OH medicaid = "SMZIL"
 MEDICAID_BY_STATE = "SMZIL" #Ohio medicaid
-procedure_code = "S5140"
-diagnosis_code = "Z741"
+#MA - S5140
+#OH - S5136
+procedure_code = "S5136"
+#MA - Z741
+#OH - R6889
+diagnosis_code = "R6889"
 PCN_LENGTH = 17
 PCN_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 
 state = dict
 insurance = dict
 
-USAGE_INDICATOR = "T"
+USAGE_INDICATOR = "P"
 
 # user_excel_data = pd.read_csv('MA_Molina/molina_feb_12.csv').to_dict(orient='records')
 # user_excel_data = pd.read_csv('/Users/Andy.Chen/Billing_Automation/MA_Molina/11March26_feb_billing.csv').to_dict(orient='records')
@@ -58,8 +71,6 @@ for user in user_excel_data:
         "memberId": re.sub(r'[^A-Za-z0-9\- ]', '', str(user.get('Medicaid ID')).strip())
       },
       #TODO this if more Medicaid eligibility
-      #MA medicaid = "KWDBT"
-      #OH medicaid = "SMZIL"
       "tradingPartnerServiceId": MEDICAID_BY_STATE
     }
     response = requests.request("POST", url, json = body, headers = {
@@ -91,8 +102,8 @@ for user in user_excel_data:
                 continue
             #TODO
             if qty == 1:
-                charge_amount = str(user["Rate"]).replace('$', '').strip()
-                # charge_amount = "102.68"
+                # charge_amount = str(user["Rate"]).replace('$', '').strip()
+                charge_amount = "102.68"
                 # print(col, charge_amount)
             elif qty == 0.5:
                 charge_amount = "51.34"
@@ -113,8 +124,6 @@ for user in user_excel_data:
                     "lineItemChargeAmount": charge_amount,
                     "measurementUnit": "UN",
                     #TODO need to confirm with entyre if the procedure code is always the same for all service lines
-                    #MA - S5140
-                    #OH - S5136
                     "procedureCode": procedure_code,
                     "procedureIdentifier": "HC",
                     "procedureModifiers": procedure_modifier,
@@ -153,8 +162,6 @@ for user in user_excel_data:
             "healthCareCodeInformation": [
               {
                   #TODO unique for each payer
-                  #MA - Z741
-                  #OH - R6889
                 "diagnosisCode": diagnosis_code,
                 "diagnosisTypeCode": "ABK"
               }
@@ -198,11 +205,6 @@ for user in user_excel_data:
           },
           #TODO check if tradingPartnerName and tradingPartnerServiceId are correct
           "tradingPartnerName": payerName,
-          #MA - senior whole health = SWHMA
-          #OH - united healthcare = KMQTZ
-          #OH - united healthcare Medicaid managed care entity = HSVNU
-          #MA medicaid = KWDBT
-          #OH medicaid = SMZIL
           "tradingPartnerServiceId": STEDI_PAYER_ID,
           "usageIndicator": USAGE_INDICATOR
         }
@@ -221,7 +223,7 @@ for user in user_excel_data:
         try:
             parsed = response.json()
             errors = parsed.get("errors", [])
-            print("✅✅✅", user["Name"], "SUBMISSION STATUS")
+            print("✅✅✅", user["user_Name"], "SUBMISSION STATUS")
             # print("Response Errors:", errors)
             print(json.dumps(parsed, indent=2))
             parsed_responses.append({
