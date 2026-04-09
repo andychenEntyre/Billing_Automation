@@ -14,8 +14,8 @@ from nanoid import generate
 
 # manually set year and month here
 YEAR = '2026'
-MONTH = '01'
-payerName = "Molina Healthcare of Ohio"
+MONTH = '03'
+payerName = "Senior Whole Health"
   #MA - senior whole health = SWHMA
   #OH - united healthcare = KMQTZ
   #OH - united healthcare Medicaid managed care entity = HSVNU
@@ -23,16 +23,16 @@ payerName = "Molina Healthcare of Ohio"
   #OH medicaid = SMZIL          #MA - senior whole health = SWHMA
   #OH - united healthcare = KMQTZ
   #OH - united healthcare Medicaid managed care entity = HSVNU
-STEDI_PAYER_ID = "BMYAQ" #Molina Healthcare of Ohio
+STEDI_PAYER_ID = "SWHMA" 
 #MA medicaid = "KWDBT"
 #OH medicaid = "SMZIL"
-MEDICAID_BY_STATE = "SMZIL" #Ohio medicaid
+MEDICAID_BY_STATE = "KWDBT" 
 #MA - S5140
 #OH - S5136
-procedure_code = "S5136"
+procedure_code = "S5140"
 #MA - Z741
 #OH - R6889
-diagnosis_code = "R6889"
+diagnosis_code = "Z741"
 PCN_LENGTH = 17
 PCN_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 
@@ -43,7 +43,8 @@ USAGE_INDICATOR = "P"
 
 # user_excel_data = pd.read_csv('MA_Molina/molina_feb_12.csv').to_dict(orient='records')
 # user_excel_data = pd.read_csv('/Users/Andy.Chen/Billing_Automation/MA_Molina/11March26_feb_billing.csv').to_dict(orient='records')
-user_excel_data = pd.read_csv('/Users/Andy.Chen/Billing_Automation/Ohio_UnitedHealth/20march26_molinaOH.csv').to_dict(orient='records')
+# user_excel_data = pd.read_csv('/Users/Andy.Chen/Billing_Automation/Ohio_UnitedHealth/20march26_molinaOH.csv').to_dict(orient='records')
+user_excel_data = pd.read_csv('/Users/Andy.Chen/Billing_Automation/MA_Molina/March26_Molina_Stedi.csv').to_dict(orient='records')
 
 parsed_responses = []
 used_patient_control_numbers = set()
@@ -102,8 +103,8 @@ for user in user_excel_data:
                 continue
             #TODO
             if qty == 1:
-                # charge_amount = str(user["Rate"]).replace('$', '').strip()
-                charge_amount = "102.68"
+                charge_amount = str(user["Rate"]).replace('$', '').strip()
+                # charge_amount = "102.68"
                 # print(col, charge_amount)
             elif qty == 0.5:
                 charge_amount = "51.34"
@@ -116,14 +117,13 @@ for user in user_excel_data:
             if modifier is not None and not pd.isna(modifier):
                 modifier = str(modifier).strip()
                 if modifier:
-                  procedure_modifier = [modifier]
+                  procedure_modifier = [m.strip() for m in modifier.split(":") if m.strip()]
 
             service_line_items.append({
                 "professionalService": {
                     "compositeDiagnosisCodePointers": {"diagnosisCodePointers": ["1"]},
                     "lineItemChargeAmount": charge_amount,
                     "measurementUnit": "UN",
-                    #TODO need to confirm with entyre if the procedure code is always the same for all service lines
                     "procedureCode": procedure_code,
                     "procedureIdentifier": "HC",
                     "procedureModifiers": procedure_modifier,
@@ -155,13 +155,16 @@ for user in user_excel_data:
             "taxonomyCode": None
           },
           "claimInformation": {
+            "claimSupplementalInformation": {
+              # "claimControlNumber": str(user['supplement_control_number']),
+              "priorAuthorizationNumber": str(user['PA Number'])
+            },
             "benefitsAssignmentCertificationIndicator": "Y",
             "claimChargeAmount": str(user['Total']).replace('$', '').replace(',', '').strip(),  #needs to be the total Billable amout from excel
             "claimFilingCode": "MC",
             "claimFrequencyCode": "1",
             "healthCareCodeInformation": [
               {
-                  #TODO unique for each payer
                 "diagnosisCode": diagnosis_code,
                 "diagnosisTypeCode": "ABK"
               }
@@ -250,7 +253,7 @@ if USAGE_INDICATOR != "T":
   # More readable timestamp
   timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
-  filename = f"stedi_jan_parsed_responses_{timestamp}.csv"
+  filename = f"stedi_parsed_responses_{timestamp}.csv"
   flat_df['date_time'] = timestamp
   # flat_df['medicaid_state'] = 
   # flat_df['Medicaid_ID'] = re.sub(r'[^A-Za-z0-9\- ]', '', str(user.get('Medicaid ID')).strip())
