@@ -10,11 +10,29 @@ import requests
 import pandas as pd
 from datetime import datetime
 import os
+from nanoid import generate
 
 # manually set year and month here
 YEAR = '2026'
 MONTH = '01'
 payerName = "Senior Whole Health"
+#MA - senior whole health = SWHMA
+#OH - united healthcare = KMQTZ
+#OH - united healthcare Medicaid managed care entity = HSVNU
+#MA medicaid = KWDBT
+#OH medicaid = SMZIL
+STEDI_PAYER_ID = "SWHMA"
+#MA medicaid = "KWDBT"
+#OH medicaid = "SMZIL"
+MEDICAID_BY_STATE = "KWDBT"
+#MA - S5140
+#OH - S5136
+procedure_code = "S5140"
+#MA - Z741
+#OH - R6889
+diagnosis_code = "Z741"
+PCN_LENGTH = 17
+PCN_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 
 state = dict
 insurance = dict
@@ -22,9 +40,19 @@ insurance = dict
 USAGE_INDICATOR = "P"
 
 # user_excel_data = pd.read_csv('MA_Molina/molina_feb_12.csv').to_dict(orient='records')
-user_excel_data = pd.read_csv('/Users/Andy.Chen/Billing_Automation/MA_Molina/6March26_rebill.csv').to_dict(orient='records')
+# user_excel_data = pd.read_csv('/Users/Andy.Chen/Billing_Automation/MA_Molina/6March26_rebill.csv').to_dict(orient='records')
+user_excel_data = pd.read_csv('/Users/Andy.Chen/Billing_Automation/MA_Molina/9april26_jan_Molina_rebill.csv').to_dict(orient='records')
 
 parsed_responses = []
+used_patient_control_numbers = set()
+
+
+def new_patient_control_number(existing):
+    while True:
+        pcn = generate(PCN_ALPHABET, PCN_LENGTH)
+        if pcn not in existing:
+            existing.add(pcn)
+            return pcn
 
 for user in user_excel_data:
     print(user)
@@ -43,7 +71,7 @@ for user in user_excel_data:
       #TODO this if more Medicaid eligibility
       #MA medicaid = "KWDBT"
       #OH medicaid = "SMZIL"
-      "tradingPartnerServiceId": "KWDBT"
+      "tradingPartnerServiceId": MEDICAID_BY_STATE
     }
     response = requests.request("POST", url, json = body, headers = {
       "Authorization": "RYnvhqL.0X6jgBc6ewt5N7v2ILnQtiGy",
@@ -92,10 +120,7 @@ for user in user_excel_data:
                     "compositeDiagnosisCodePointers": {"diagnosisCodePointers": ["1"]},
                     "lineItemChargeAmount": charge_amount,
                     "measurementUnit": "UN",
-                    #TODO need to confirm with entyre if the procedure code is always the same for all service lines
-                    #MA - S5140
-                    #OH - S5136
-                    "procedureCode": "S5140",
+                    "procedureCode": procedure_code,
                     "procedureIdentifier": "HC",
                     "procedureModifiers": procedure_modifiers,
                     "serviceUnitCount": "1"
@@ -124,6 +149,7 @@ for user in user_excel_data:
             })
             continue
         # print("✅ Service line items built:", service_line_items)
+        patient_control_number = new_patient_control_number(used_patient_control_numbers)
         pulled = {
           "billing": {
             "address": {
@@ -145,7 +171,8 @@ for user in user_excel_data:
           },
           "claimInformation": {
             "claimSupplementalInformation": {
-                "claimControlNumber": str(user['supplement_control_number'])
+                "claimControlNumber": str(user['supplement_control_number']),
+                "priorAuthorizationNumber": str(user['PA Number'])
             },
             "benefitsAssignmentCertificationIndicator": "Y",
             "claimChargeAmount": str(user['Billed']).replace('$', '').replace(',', '').strip(),  #needs to be the total Billable amout from excel
@@ -153,14 +180,11 @@ for user in user_excel_data:
             "claimFrequencyCode": "7",
             "healthCareCodeInformation": [
               {
-                  #TODO unique for each payer
-                  #MA - Z741
-                  #OH - R6889
-                "diagnosisCode": "Z741",
+                "diagnosisCode": diagnosis_code,
                 "diagnosisTypeCode": "ABK"
               }
             ],
-            "patientControlNumber": str(user.get('public_id', 'missing')), #todo hubspot RecordID
+            "patientControlNumber": patient_control_number,
             "placeOfServiceCode": "12",
             "planParticipationCode": "A",
             "releaseInformationCode": "Y",
@@ -169,7 +193,6 @@ for user in user_excel_data:
             "signatureIndicator": "Y"
           },
           "receiver": {
-            #TODO check if organizationName is correct
             "organizationName": payerName
           },
           "submitter": {
@@ -194,17 +217,15 @@ for user in user_excel_data:
             "lastName": eligibility_data.get("subscriber", {}).get("lastName", ""),
             "memberId": eligibility_data.get("subscriber", {}).get("memberId", ""),
             "paymentResponsibilityLevelCode": "P",
-            #TODO check if subscriberGroupName is correct
             "subscriberGroupName": payerName,
           },
-          #TODO check if tradingPartnerName and tradingPartnerServiceId are correct
           "tradingPartnerName": payerName,
           #MA - senior whole health = SWHMA
           #OH - united healthcare = KMQTZ
           #OH - united healthcare Medicaid managed care entity = HSVNU
           #MA medicaid = KWDBT
           #OH medicaid = SMZIL
-          "tradingPartnerServiceId": "SWHMA",
+          "tradingPartnerServiceId": STEDI_PAYER_ID,
           "usageIndicator": USAGE_INDICATOR
         }
         url = "https://healthcare.us.stedi.com/2024-04-01/change/medicalnetwork/professionalclaims/v3/submission"
