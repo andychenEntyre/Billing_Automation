@@ -15,36 +15,31 @@ from nanoid import generate
 # manually set year and month here
 YEAR = '2026'
 MONTH = '03'
-payerName = "Senior Whole Health"
-  #MA - senior whole health = SWHMA
-  #OH - united healthcare = KMQTZ
-  #OH - united healthcare Medicaid managed care entity = HSVNU
-  #MA medicaid = KWDBT
-  #OH medicaid = SMZIL          #MA - senior whole health = SWHMA
-  #OH - united healthcare = KMQTZ
-  #OH - united healthcare Medicaid managed care entity = HSVNU
-STEDI_PAYER_ID = "SWHMA" 
-#MA medicaid = "KWDBT"
-#OH medicaid = "SMZIL"
-MEDICAID_BY_STATE = "KWDBT" 
-#MA - S5140
-#OH - S5136
-procedure_code = "S5140"
-#MA - Z741
-#OH - R6889
-diagnosis_code = "Z741"
+
 PCN_LENGTH = 17
 PCN_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 
 state = dict
 insurance = dict
 
-USAGE_INDICATOR = "P"
+USAGE_INDICATOR = "T"
+
+#MA medicaid = "KWDBT"
+#OH medicaid = "SMZIL"
+MEDICAID_BY_STATE = "SMZIL"
+#MA - S5140
+#OH - S5136
+procedure_code = "S5136"
+#MA - Z741
+#OH - R6889
+diagnosis_code = "R6889"
 
 # user_excel_data = pd.read_csv('MA_Molina/molina_feb_12.csv').to_dict(orient='records')
 # user_excel_data = pd.read_csv('/Users/Andy.Chen/Billing_Automation/MA_Molina/11March26_feb_billing.csv').to_dict(orient='records')
 # user_excel_data = pd.read_csv('/Users/Andy.Chen/Billing_Automation/Ohio_UnitedHealth/20march26_molinaOH.csv').to_dict(orient='records')
-user_excel_data = pd.read_csv('/Users/Andy.Chen/Billing_Automation/MA_Molina/March26_Molina_Stedi.csv').to_dict(orient='records')
+# user_excel_data = pd.read_csv('/Users/Andy.Chen/Billing_Automation/MA_Molina/March26_Molina_Stedi.csv').to_dict(orient='records')
+user_excel_data = pd.read_csv('/Users/Andy.Chen/Billing_Automation/mycare_march_flowsheets/entire_mycare_march.csv',
+                              encoding='cp1252').to_dict(orient='records')
 
 parsed_responses = []
 used_patient_control_numbers = set()
@@ -56,11 +51,31 @@ def new_patient_control_number(existing):
         if pcn not in existing:
             existing.add(pcn)
             return pcn
+        
+def get_payer_info(plan_name):
+    plan_name = str(plan_name).strip()
+
+    if plan_name == 'Anthem':
+        return "Anthem Blue Cross Blue Shield MyCare Ohio", "RVDFM"
+    elif plan_name == 'Caresource':
+        return "Next Generation MyCare Ohio - CareSource", "XENXY"
+    elif plan_name == 'Molina':
+        return "Next Generation MyCare Ohio - Molina", "DAQUG"
+    #TODO waiting for Aetna and United stedi enrollment
+    return None, None
 
 for user in user_excel_data:
+    payerName, STEDI_PAYER_ID = get_payer_info(user.get('Medicaid Insurance Plan-'))
+
+    if not payerName or not STEDI_PAYER_ID:
+      print(f"❌ Unknown payer for user {user.get('Name')}: {user.get('Medicaid Insurance Plan-')}")
+      continue
+
+    medicaid_id = re.sub(r'[^A-Za-z0-9\- ]', '', str(user.get('Medicaid ID', '')).strip())
     print(user)
-    print(re.sub(r'[^A-Za-z0-9\- ]', '', str(user.get('Medicaid ID')).strip()))
+    print(medicaid_id)
     print("\n")
+    
     url = "https://healthcare.us.stedi.com/2024-04-01/change/medicalnetwork/eligibility/v3"
     body = {
       "provider": {
@@ -69,7 +84,7 @@ for user in user_excel_data:
       },
       "subscriber": {
         #TODO need to add memberID to csv file before running this.
-        "memberId": re.sub(r'[^A-Za-z0-9\- ]', '', str(user.get('Medicaid ID')).strip())
+        "memberId": medicaid_id
       },
       #TODO this if more Medicaid eligibility
       "tradingPartnerServiceId": MEDICAID_BY_STATE
@@ -91,20 +106,31 @@ for user in user_excel_data:
         for n in range(1, 32):
             col = f"D{n}"
             raw = user.get(col)
-            if raw is None:
-                print("missing day")
+            if raw is None or pd.isna(raw):
                 continue
+
+            raw_str = str(raw).strip().lower()
+            if raw_str in {"full day", "full"}:
+                qty = 1.0
+            elif raw_str in {"half day", "half"}:
+                qty = 0.5
+            else:
+                try:
+                    qty = float(raw)
+                except (TypeError, ValueError):
+                    continue
+
             try:
-                qty = float(raw)
+                qty = float(qty)
             except (TypeError, ValueError):
                 continue
             if qty <= 0:
                 print(col, "No matching charge amount for quantity:")
                 continue
-            #TODO
+            #TODO make more robust
             if qty == 1:
-                charge_amount = str(user["Rate"]).replace('$', '').strip()
-                # charge_amount = "102.68"
+                # charge_amount = str(user["Rate"]).replace('$', '').strip()
+                charge_amount = "102.68"
                 # print(col, charge_amount)
             elif qty == 0.5:
                 charge_amount = "51.34"
@@ -133,8 +159,14 @@ for user in user_excel_data:
                 "renderingProvider": None,
                 "serviceDate": f"{YEAR}{int(MONTH):02d}{n:02d}"
             })
+
+        if not service_line_items:
+            print("❌❌❌", user.get("Name", "Unknown user"), "has no billable service lines; skipping claim submission")
+            continue
+
         # print("✅ Service line items built:", service_line_items)
         patient_control_number = new_patient_control_number(used_patient_control_numbers)
+
         pulled = {
           "billing": {
             "address": {
@@ -157,10 +189,12 @@ for user in user_excel_data:
           "claimInformation": {
             "claimSupplementalInformation": {
               # "claimControlNumber": str(user['supplement_control_number']),
-              "priorAuthorizationNumber": str(user['PA Number'])
+              "priorAuthorizationNumber": str(user['Prior Auth #'])
+              if str(user.get('Prior Auth #', '')).strip().lower() != "unknown"
+              else None
             },
             "benefitsAssignmentCertificationIndicator": "Y",
-            "claimChargeAmount": str(user['Total']).replace('$', '').replace(',', '').strip(),  #needs to be the total Billable amout from excel
+            "claimChargeAmount": str(user['Billable']).replace('$', '').replace(',', '').strip(),  #needs to be the total Billable amout from excel
             "claimFilingCode": "MC",
             "claimFrequencyCode": "1",
             "healthCareCodeInformation": [
@@ -178,7 +212,6 @@ for user in user_excel_data:
             "signatureIndicator": "Y"
           },
           "receiver": {
-            #TODO check if organizationName is correct
             "organizationName": payerName
           },
           "submitter": {
@@ -226,7 +259,7 @@ for user in user_excel_data:
         try:
             parsed = response.json()
             errors = parsed.get("errors", [])
-            print("✅✅✅", user["user_Name"], "SUBMISSION STATUS")
+            print("🌀🌀🌀", user["user_Name"], "SUBMISSION STATUS")
             # print("Response Errors:", errors)
             print(json.dumps(parsed, indent=2))
             parsed_responses.append({
