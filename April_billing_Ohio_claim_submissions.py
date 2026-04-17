@@ -38,8 +38,20 @@ diagnosis_code = "R6889"
 # user_excel_data = pd.read_csv('/Users/Andy.Chen/Billing_Automation/MA_Molina/11March26_feb_billing.csv').to_dict(orient='records')
 # user_excel_data = pd.read_csv('/Users/Andy.Chen/Billing_Automation/Ohio_UnitedHealth/20march26_molinaOH.csv').to_dict(orient='records')
 # user_excel_data = pd.read_csv('/Users/Andy.Chen/Billing_Automation/MA_Molina/March26_Molina_Stedi.csv').to_dict(orient='records')
-user_excel_data = pd.read_csv('/Users/Andy.Chen/Billing_Automation/mycare_march_flowsheets/March_MyCare_billing.csv',
-                              encoding='cp1252').to_dict(orient='records')
+# user_excel_data = pd.read_csv('/Users/Andy.Chen/Billing_Automation/mycare_march_flowsheets/March_MyCare_billing.csv',
+#                               encoding='cp1252').to_dict(orient='records')
+user_excel_data = pd.read_csv('/Users/Andy.Chen/Billing_Automation/Ohio_flowsheets/17april_mycare_missing_medicaid_billing.csv').to_dict(orient='records')
+
+if not user_excel_data:
+    raise ValueError("Input file has no rows.")
+
+required_columns = ["Medicaid ID", "Billable"]
+available_columns = list(user_excel_data[0].keys())
+missing_columns = [col for col in required_columns if col not in available_columns]
+if missing_columns:
+    print(f"❌❌❌ ERROR: Missing required columns: {missing_columns}")
+    print(f"Available columns in CSV: {available_columns}")
+    raise ValueError(f"Required column '{missing_columns[0]}' not found in CSV. Please check column names.")
 
 parsed_responses = []
 used_patient_control_numbers = set()
@@ -305,7 +317,8 @@ for user in user_excel_data:
             is_success = status_value.lower() == "success"
             print("🌀🌀🌀", user["user_Name"], "SUBMISSION STATUS")
             # print("Response Errors:", errors)
-            print(json.dumps(parsed, indent=2))
+            if not is_success:
+              print(json.dumps(parsed, indent=2))
             parsed_responses.append({
                 **audit_base,
                 "outcome": "success" if is_success else "failed",
