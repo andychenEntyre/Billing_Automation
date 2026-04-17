@@ -14,7 +14,7 @@ from nanoid import generate
 
 # manually set year and month here
 YEAR = '2026'
-MONTH = '03'
+MONTH = '02'
 
 PCN_LENGTH = 17
 PCN_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
@@ -38,8 +38,10 @@ diagnosis_code = "R6889"
 # user_excel_data = pd.read_csv('/Users/Andy.Chen/Billing_Automation/MA_Molina/11March26_feb_billing.csv').to_dict(orient='records')
 # user_excel_data = pd.read_csv('/Users/Andy.Chen/Billing_Automation/Ohio_UnitedHealth/20march26_molinaOH.csv').to_dict(orient='records')
 # user_excel_data = pd.read_csv('/Users/Andy.Chen/Billing_Automation/MA_Molina/March26_Molina_Stedi.csv').to_dict(orient='records')
-user_excel_data = pd.read_csv('/Users/Andy.Chen/Billing_Automation/mycare_march_flowsheets/entire_mycare_march.csv',
-                              encoding='cp1252').to_dict(orient='records')
+# user_excel_data = pd.read_csv('/Users/Andy.Chen/Billing_Automation/mycare_march_flowsheets/entire_mycare_march.csv',
+#                               encoding='cp1252').to_dict(orient='records')
+user_excel_data = pd.read_csv('/Users/Andy.Chen/Billing_Automation/ODA_test.csv').to_dict(orient='records')
+
 
 parsed_responses = []
 used_patient_control_numbers = set()
@@ -61,6 +63,8 @@ def get_payer_info(plan_name):
         return "Next Generation MyCare Ohio - CareSource", "XENXY"
     elif plan_name == 'Molina':
         return "Next Generation MyCare Ohio - Molina", "DAQUG"
+    elif plan_name == 'Passport':
+        return "OH Department Aging", "VMAXQ"
     #TODO waiting for Aetna and United stedi enrollment
     return None, None
 
