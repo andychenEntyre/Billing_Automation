@@ -73,6 +73,8 @@ def get_payer_info(plan_name):
         return "Next Generation MyCare Ohio - CareSource", "XENXY"
     elif plan_name == 'molina':
         return "Next Generation MyCare Ohio - Molina", "DAQUG"
+    elif plan_name == 'Passport':
+        return "OH Department Aging", "VMAXQ"
     #TODO waiting for Aetna and United stedi enrollment
     return None, None
 
