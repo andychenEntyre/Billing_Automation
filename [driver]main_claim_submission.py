@@ -14,7 +14,7 @@ from nanoid import generate
 
 # manually set year and month here
 YEAR = '2026'
-MONTH = '03'
+MONTH = '02'
 
 PCN_LENGTH = 17
 PCN_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
@@ -22,17 +22,17 @@ PCN_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 state = dict
 insurance = dict
 
-USAGE_INDICATOR = "T"
+USAGE_INDICATOR = "P"
 
 #MA medicaid = "KWDBT"
 #OH medicaid = "SMZIL"
-MEDICAID_BY_STATE = "SMZIL"
+MEDICAID_BY_STATE = "KWDBT"
 #MA - S5140
 #OH - S5136
-procedure_code = "S5136"
+procedure_code = "S5140"
 #MA - Z741
 #OH - R6889
-diagnosis_code = "R6889"
+diagnosis_code = "Z741"
 
 # user_excel_data = pd.read_csv('MA_Molina/molina_feb_12.csv').to_dict(orient='records')
 # user_excel_data = pd.read_csv('/Users/Andy.Chen/Billing_Automation/MA_Molina/11March26_feb_billing.csv').to_dict(orient='records')
@@ -40,12 +40,13 @@ diagnosis_code = "R6889"
 # user_excel_data = pd.read_csv('/Users/Andy.Chen/Billing_Automation/MA_Molina/March26_Molina_Stedi.csv').to_dict(orient='records')
 # user_excel_data = pd.read_csv('/Users/Andy.Chen/Billing_Automation/mycare_march_flowsheets/March_MyCare_billing.csv',
 #                               encoding='cp1252').to_dict(orient='records')
-user_excel_data = pd.read_csv('/Users/Andy.Chen/Billing_Automation/Ohio_flowsheets/17april_mycare_missing_medicaid_billing.csv').to_dict(orient='records')
+# user_excel_data = pd.read_csv('/Users/Andy.Chen/Billing_Automation/Ohio_flowsheets/17april_mycare_missing_medicaid_billing.csv').to_dict(orient='records')
+user_excel_data = pd.read_csv('/Users/Andy.Chen/Billing_Automation/MA_flowsheets/mass_health_test.csv').to_dict(orient='records')
 
 if not user_excel_data:
     raise ValueError("Input file has no rows.")
 
-required_columns = ["Medicaid ID", "Billable"]
+required_columns = ["Medicaid ID", "Billable", "Medicaid Insurance Plan-","user_Name", "Prior Auth #", "Rate", "Modifier"] + [f"D{n}" for n in range(1, 32)]
 available_columns = list(user_excel_data[0].keys())
 missing_columns = [col for col in required_columns if col not in available_columns]
 if missing_columns:
@@ -73,13 +74,15 @@ def get_payer_info(plan_name):
         return "Next Generation MyCare Ohio - CareSource", "XENXY"
     elif plan_name == 'molina':
         return "Next Generation MyCare Ohio - Molina", "DAQUG"
-    elif plan_name == 'Passport':
+    elif plan_name == 'passport':
         return "OH Department Aging", "VMAXQ"
+    elif plan_name == 'medicaid ma':
+        return "Medicaid MA", "KWDBT"
     #TODO waiting for Aetna and United stedi enrollment
     return None, None
 
 for user in user_excel_data:
-    client_name = user.get("Name") or user.get("Deal Name") or user.get("user_Name") or "Unknown user"
+    client_name = user.get("user_Name") or "Unknown user"
     medicaid_insurance_plan = user.get("Medicaid Insurance Plan-")
     billable_amount = user.get("Billable")
     audit_base = {
@@ -94,7 +97,7 @@ for user in user_excel_data:
     payerName, STEDI_PAYER_ID = get_payer_info(user.get('Medicaid Insurance Plan-'))
 
     if not payerName or not STEDI_PAYER_ID:
-      print(f"❌ Unknown payer for user {user.get('Name')}: {user.get('Medicaid Insurance Plan-')}")
+      print(f"❌ Unknown payer for user {user.get('user_Name')}: {user.get('Medicaid Insurance Plan-')}")
       parsed_responses.append({
         **audit_base,
         "outcome": "skipped",
@@ -168,11 +171,12 @@ for user in user_excel_data:
                 continue
             #TODO make more robust
             if qty == 1:
-                # charge_amount = str(user["Rate"]).replace('$', '').strip()
-                charge_amount = "102.68"
+                charge_amount = str(user["Rate"]).replace('$', '').strip()
+                # charge_amount = "102.68"
                 # print(col, charge_amount)
             elif qty == 0.5:
-                charge_amount = "51.34"
+                charge_amount = str(user["Rate"]).replace('$', '').strip()
+                # charge_amount = "51.34"
                 # print(col, charge_amount)
             else:
                 continue
