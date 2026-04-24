@@ -17,7 +17,8 @@ import os
 # user_excel_data = pd.read_csv('Ohio_UnitedHealth/rebill_ohio_27Feb26.csv').to_dict(orient='records')
 # user_excel_data = pd.read_csv('/Users/Andy.Chen/Billing_Automation/9mar26_tanial_eligibility/MA Lost in App with Most Recent Appointment.csv').to_dict(orient='records')
 # user_excel_data = pd.read_csv('/Users/Andy.Chen/Billing_Automation/9mar26_tanial_eligibility/24march26_MA_leads.csv').to_dict(orient='records')
-user_excel_data = pd.read_csv('/Users/Andy.Chen/Billing_Automation/9mar26_tanial_eligibility/26march26_MA_leads_NO_DEMO.csv').to_dict(orient='records')
+# user_excel_data = pd.read_csv('/Users/Andy.Chen/Billing_Automation/9mar26_tanial_eligibility/26march26_MA_leads_NO_DEMO.csv').to_dict(orient='records')
+user_excel_data = pd.read_csv('/Users/Andy.Chen/Billing_Automation/9mar26_tanial_eligibility/SCO_check_Stedi.csv').to_dict(orient='records')
 
 #POC with Ohio UHC people
 # out_path = "benefitsInformation_flat.csv"
@@ -155,7 +156,7 @@ def format_dob(dob_raw: str) -> str:
     dob_raw = str(dob_raw or "").strip()
     if not dob_raw or set(dob_raw) == {"#"}:
         return ""
-    for fmt in ("%m/%d/%Y", "%m/%d/%y"):
+    for fmt in ("%Y-%m-%d", "%m/%d/%Y", "%m/%d/%y"):
         try:
             parsed = datetime.strptime(dob_raw, fmt)
             if fmt == "%m/%d/%y" and parsed > datetime.now():
