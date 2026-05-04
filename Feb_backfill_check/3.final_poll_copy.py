@@ -9,11 +9,20 @@ import os
 
 
 BASE_URL = "https://manager.us.stedi.com/2024-04-01/eligibility-manager/polling/batch-eligibility"
-pd_df = pd.read_csv("Feb_backfill_check/Feb_eligibility_batch_log.csv", dtype = str)
-day = 1
+pd_df = pd.read_csv("real_time_eligibility_check/APR_client_reinstatements.csv", dtype = str)
 for _, row in pd_df.iterrows():
-    BATCH_ID = row['batch_id']
-    run_date = f"2/{day}/2026"
+    BATCH_ID = str(row.get("batch_id", "")).strip()
+    if not BATCH_ID or str(row.get("status_code", "")).strip() != "200":
+        print(f"⚠️ Skipping row with invalid batch/status: {row.to_dict()}")
+        continue
+
+    day_str = str(row.get("day", "")).strip()
+    if day_str.isdigit():
+        run_date = f"4/{int(day_str)}/2026"
+    else:
+        batch_name = str(row.get("batch_name", ""))
+        match = re.search(r"APR(\d{2})", batch_name)
+        run_date = f"4/{int(match.group(1))}/2026" if match else ""
 
     headers = {
         "Authorization": "RYnvhqL.0X6jgBc6ewt5N7v2ILnQtiGy",
@@ -154,7 +163,7 @@ for _, row in pd_df.iterrows():
         
     print("✅ new data final row count:", len(new_rows_df))
 
-    out_path = "Feb_backfill_check/medicaid_mco_eligibility_results.csv"
+    out_path = "real_time_eligibility_check/APR_client_reinstatements_results.csv"
 
     if os.path.exists(out_path):
         existing_df = pd.read_csv(out_path, dtype=str)  # dtype=str prevents type-mismatch issues
@@ -191,4 +200,3 @@ for _, row in pd_df.iterrows():
     print(f"✅ Added {len(new_rows_df)} new rows.")
     print(f"✅ Total rows now: {len(final_df)}")
     print("✅ Wrote:", os.path.abspath(out_path))
-    day+=1

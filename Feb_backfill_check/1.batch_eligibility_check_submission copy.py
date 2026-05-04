@@ -8,7 +8,8 @@ from datetime import datetime
 
 '''this file comes from Databricks MA client pull'''
 
-file_path = "real_time_eligibility_check/02March26_MA_clients.csv"
+# file_path = "real_time_eligibility_check/8april26_client_discharged.csv"
+file_path = "real_time_eligibility_check/04May_flowsheet_reinstatements.csv"
 df = pd.read_csv(file_path)
 
 # --- Config ---
@@ -22,7 +23,7 @@ HEADERS = {
     "Content-Type": "application/json",
 }
 
-LOG_PATH = "Feb_backfill_check/Feb_eligibility_batch_log.csv"
+LOG_PATH = "real_time_eligibility_check/APR_client_reinstatements.csv"
 
 # Optional: create log header if file doesn't exist yet
 if not os.path.exists(LOG_PATH):
@@ -40,16 +41,16 @@ for _, row in df.iterrows():
         },
         "submitterTransactionIdentifier": str(row["public_id"]),
         "subscriber": {
-            "firstName": str(row["first_name"]),
-            "lastName": str(row["last_name"]),
+            # "firstName": str(row["first_name"]),
+            # "lastName": str(row["last_name"]),
             "memberId": str(row["medicaid_id"])
         },
         "tradingPartnerServiceId": "KWDBT"
     })
 
-# --- Submit 28 batches, one per day ---
-for day in range(1, 29):
-    dos = f"202602{day:02d}"  # 20260201 ... 20260230
+# --- Submit 30 batches, one per day ---
+for day in range(1, 31):
+    dos = f"202604{day:02d}"  # 20260401 ... 20260430
     # create day-specific items (add encounter.dateOfService)
     items = []
     for item in base_items:
@@ -61,7 +62,7 @@ for day in range(1, 29):
         print(item_with_dos)
         items.append(item_with_dos)
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    batch_name = f"eligibility-batch-{timestamp}-FEB{day:02d}"
+    batch_name = f"eligibility-batch-{timestamp}-APR{day:02d}"
 
     body = {
         "items": items,
@@ -103,7 +104,6 @@ for day in range(1, 29):
             time.sleep(2 * attempt)
 
     time.sleep(0.5)
-
 
 
 
